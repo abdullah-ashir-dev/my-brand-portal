@@ -1,0 +1,21 @@
+# ============================================================
+# FILE: .gitignore
+# PURPOSE: Tell Git which files NOT to upload to GitHub
+# ============================================================
+
+# ⚠️ Secret keys — NEVER push to GitHub
+.env
+.env.local
+.env.production
+
+# Build output (auto-generated, no need to push)
+dist/
+build/
+
+# Node modules (huge folder, reinstall with npm install)
+node_modules/
+
+# Editor files
+.DS_Store
+.vscode/
+*.log
