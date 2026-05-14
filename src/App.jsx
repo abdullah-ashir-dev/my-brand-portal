@@ -1,596 +1,712 @@
 // ============================================
-// BARTER EXCHANGE APP - App.jsx
-// ============================================
-// THIS IS THE ONLY FILE YOU NEED TO UPDATE!
-// All features, pages, and components are here.
-// Other files (main.jsx, index.css, etc.) stay the same.
-// To add new features, just edit this file.
-// ============================================
-
-// ============================================
 // SECTION 1: IMPORTS
 // ============================================
-import { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  getAuth,
-  signInAnonymously,
-  onAuthStateChanged
-} from 'firebase/auth';
+  Home, Search, PlusCircle, Layers, User, X, Check, Edit2, Trash2,
+  MessageCircle, Clock, ChevronRight, Sparkles, ArrowRight,
+  Menu, LogOut, AlertCircle, Info, CheckCircle, Loader2,
+  Send, Mail, Phone, Globe, BookOpen, Briefcase, Camera,
+  Music, Heart, PenTool, Code, TrendingUp, Zap, Shield,
+  Award, Users, FolderOpen, ExternalLink, Copy, RefreshCw
+} from 'lucide-react'
+import { initializeApp } from 'firebase/app'
 import {
-  getFirestore,
-  collection,
-  addDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  serverTimestamp,
-  onSnapshot
-} from 'firebase/firestore';
+  getFirestore, collection, addDoc, updateDoc, deleteDoc,
+  doc, onSnapshot, query, orderBy, serverTimestamp,
+  getDocs, where
+} from 'firebase/firestore'
 import {
-  Home, Search, PlusCircle, User, ArrowRight,
-  ArrowLeftRight, Edit3, Trash2, Send, Check, X,
-  Clock, Layers, Sparkles, Zap, Globe, Palette,
-  Code, Briefcase, Languages, Music, GraduationCap,
-  Heart, Camera, PenTool, MoreHorizontal, LogOut,
-  TrendingUp, Users, Award, Loader2, MessageCircle,
-  AlertCircle
-} from 'lucide-react';
+  getAuth, signInAnonymously, onAuthStateChanged
+} from 'firebase/auth'
 
 // ============================================
-// SECTION 2: FIREBASE CONFIGURATION
+// SECTION 2: FIREBASE CONFIG
 // ============================================
-// INSTRUCTIONS:
-// 1. Go to https://console.firebase.google.com
-// 2. Click "Create a project" -> give it a name (e.g., "barter-exchange")
-// 3. Go to "Project Settings" (gear icon top left) -> "General" tab
-// 4. Scroll to "Your apps" -> Click the Web icon (</>)
-// 5. Give it a nickname -> click "Register app"
-// 6. You will see a firebaseConfig object -> COPY it
-// 7. PASTE it below, replacing the placeholder values
-// 8. Go to "Firestore Database" in left sidebar -> "Create database"
-//    -> Choose "Start in test mode" -> pick a location -> Done
-// ============================================
-
+// Replace these placeholder values with your actual Firebase config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY_HERE",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+  apiKey: "AIzaSyAjAgUdBwyu820JqxtAr3546J90trnNImI",
+  authDomain: "skillswap-48163.firebaseapp.com",
+  projectId: "skillswap-48163",
+  storageBucket: "skillswap-48163.firebasestorage.app",
+  messagingSenderId: "953886423467",
+  appId: "1:953886423467:web:47dcc723d89d9765de7aee"
+}
 
-// Initialize Firebase (DO NOT CHANGE BELOW)
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig)
+const db = getFirestore(app)
+const auth = getAuth(app)
+const listingsCollection = collection(db, 'listings')
 
 // ============================================
-// SECTION 3: CONSTANTS & CATEGORIES
+// SECTION 3: CONSTANTS
 // ============================================
-// Add new categories here to expand the app!
-// Each category needs: id, label, icon, color
-
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: Layers, color: 'text-gray-400' },
-  { id: 'design', label: 'Design & Creative', icon: Palette, color: 'text-pink-400' },
-  { id: 'tech', label: 'Programming & Tech', icon: Code, color: 'text-blue-400' },
-  { id: 'business', label: 'Business & Marketing', icon: Briefcase, color: 'text-amber-400' },
-  { id: 'language', label: 'Language & Translation', icon: Languages, color: 'text-green-400' },
-  { id: 'music', label: 'Music & Audio', icon: Music, color: 'text-purple-400' },
-  { id: 'education', label: 'Education & Tutoring', icon: GraduationCap, color: 'text-cyan-400' },
-  { id: 'fitness', label: 'Health & Fitness', icon: Heart, color: 'text-red-400' },
-  { id: 'photo', label: 'Photography & Video', icon: Camera, color: 'text-orange-400' },
-  { id: 'writing', label: 'Writing & Content', icon: PenTool, color: 'text-teal-400' },
-  { id: 'other', label: 'Other', icon: MoreHorizontal, color: 'text-gray-400' },
-];
+  { id: 'design', label: 'Design & Creative', icon: PenTool, color: 'from-pink-500 to-rose-500' },
+  { id: 'programming', label: 'Programming & Tech', icon: Code, color: 'from-blue-500 to-cyan-500' },
+  { id: 'business', label: 'Business & Marketing', icon: Briefcase, color: 'from-amber-500 to-orange-500' },
+  { id: 'language', label: 'Language & Translation', icon: Globe, color: 'from-emerald-500 to-teal-500' },
+  { id: 'music', label: 'Music & Audio', icon: Music, color: 'from-violet-500 to-purple-500' },
+  { id: 'education', label: 'Education & Tutoring', icon: BookOpen, color: 'from-sky-500 to-blue-500' },
+  { id: 'health', label: 'Health & Fitness', icon: Heart, color: 'from-red-500 to-pink-500' },
+  { id: 'photography', label: 'Photography & Video', icon: Camera, color: 'from-indigo-500 to-violet-500' },
+  { id: 'writing', label: 'Writing & Content', icon: PenTool, color: 'from-teal-500 to-emerald-500' },
+  { id: 'other', label: 'Other', icon: FolderOpen, color: 'from-slate-500 to-gray-500' },
+]
 
-// Get category info by ID
-function getCategoryInfo(catId) {
-  return CATEGORIES.find(c => c.id === catId) || CATEGORIES[CATEGORIES.length - 1];
-}
+const NAV_ITEMS = [
+  { id: 'home', label: 'Home', icon: Home },
+  { id: 'explore', label: 'Explore', icon: Search },
+  { id: 'post', label: 'Post', icon: PlusCircle },
+  { id: 'my-listings', label: 'My Listings', icon: Layers },
+  { id: 'profile', label: 'Profile', icon: User },
+]
 
-// Category badge color styles
-const CATEGORY_STYLES = {
-  all: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-  design: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
-  tech: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  business: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  language: 'bg-green-500/20 text-green-300 border-green-500/30',
-  music: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  education: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-  fitness: 'bg-red-500/20 text-red-300 border-red-500/30',
-  photo: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-  writing: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-  other: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-};
-
-// ============================================
-// SECTION 4: HELPER FUNCTIONS
-// ============================================
-
-// Convert Firestore timestamp to readable time
-function timeAgo(timestamp) {
-  if (!timestamp) return 'just now';
-  try {
-    const now = new Date();
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const seconds = Math.floor((now - date) / 1000);
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
-    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
-    if (seconds < 604800) return Math.floor(seconds / 86400) + 'd ago';
-    return date.toLocaleDateString();
-  } catch (e) {
-    return 'recently';
+const HOW_IT_WORKS = [
+  {
+    step: 1,
+    title: 'Post Your Skill',
+    description: 'Share what you can offer and what you want to learn in return.',
+    icon: PlusCircle,
+    gradient: 'from-emerald-500 to-teal-500'
+  },
+  {
+    step: 2,
+    title: 'Browse & Discover',
+    description: 'Explore skills from people around the world. Filter by category.',
+    icon: Search,
+    gradient: 'from-blue-500 to-indigo-500'
+  },
+  {
+    step: 3,
+    title: 'Connect & Exchange',
+    description: 'Contact the person, arrange the exchange, and start learning.',
+    icon: MessageCircle,
+    gradient: 'from-violet-500 to-purple-500'
   }
+]
+
+// ============================================
+// SECTION 4: HELPERS
+// ============================================
+
+/**
+ * Format a Firestore timestamp to a relative time string (e.g., "2h ago")
+ */
+const formatTimeAgo = (timestamp) => {
+  if (!timestamp) return 'Just now'
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+  const now = new Date()
+  const seconds = Math.floor((now - date) / 1000)
+
+  if (seconds < 60) return 'Just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo ago`
+  return `${Math.floor(months / 12)}y ago`
 }
 
-// Get initials from name for avatar display
-function getInitials(name) {
-  if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+/**
+ * Get category details by ID
+ */
+const getCategory = (categoryId) => {
+  return CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[CATEGORIES.length - 1]
+}
+
+/**
+ * Get user initials from name
+ */
+const getInitials = (name) => {
+  if (!name) return '?'
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+/**
+ * Generate a consistent gradient for a user based on their ID
+ */
+const getUserGradient = (userId) => {
+  const gradients = [
+    'from-indigo-500 to-purple-500',
+    'from-blue-500 to-cyan-500',
+    'from-emerald-500 to-teal-500',
+    'from-rose-500 to-pink-500',
+    'from-amber-500 to-orange-500',
+    'from-violet-500 to-fuchsia-500',
+  ]
+  if (!userId) return gradients[0]
+  const index = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % gradients.length
+  return gradients[index]
+}
+
+/**
+ * Truncate text with ellipsis
+ */
+const truncate = (text, maxLength) => {
+  if (!text || text.length <= maxLength) return text
+  return text.slice(0, maxLength) + '...'
 }
 
 // ============================================
-// SECTION 5: SMALL REUSABLE COMPONENTS
+// SECTION 5: SMALL COMPONENTS
 // ============================================
-// These are small UI pieces used across pages
 
-// --- Toast Notification ---
-function Toast({ toast, onClose }) {
-  if (!toast.show) return null;
+/**
+ * Toast Notification Component
+ * Displays temporary notifications at the top-right of the screen
+ */
+const Toast = ({ toast, onClose }) => {
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => onClose(), 3000)
+    return () => clearTimeout(timer)
+  }, [toast, onClose])
 
-  const colors = {
-    success: 'bg-emerald-500/90 border-emerald-400/50',
-    error: 'bg-red-500/90 border-red-400/50',
-    info: 'bg-blue-500/90 border-blue-400/50',
-  };
+  if (!toast) return null
 
-  return (
-    <div className={
-      'fixed top-20 right-4 z-[100] ' +
-      (colors[toast.type] || colors.info) +
-      ' text-white px-5 py-3 rounded-xl border backdrop-blur-sm shadow-2xl flex items-center gap-3 slide-up'
-    }>
-      {toast.type === 'success' && <Check className="w-5 h-5" />}
-      {toast.type === 'error' && <AlertCircle className="w-5 h-5" />}
-      {toast.type === 'info' && <MessageCircle className="w-5 h-5" />}
-      <span className="text-sm font-medium">{toast.message}</span>
-      <button onClick={onClose} className="ml-2 hover:bg-white/20 rounded-full p-1">
-        <X className="w-4 h-4" />
-      </button>
-    </div>
-  );
-}
+  const styles = {
+    success: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
+    error: 'bg-red-500/20 border-red-500/30 text-red-300',
+    info: 'bg-blue-500/20 border-blue-500/30 text-blue-300',
+  }
 
-// --- Welcome / Name Modal (shown on first visit) ---
-function NameModal({ onSave, currentName }) {
-  const [name, setName] = useState(currentName || '');
+  const icons = {
+    success: CheckCircle,
+    error: AlertCircle,
+    info: Info,
+  }
 
-  const handleSave = () => {
-    if (name.trim().length < 2) return;
-    onSave(name.trim());
-  };
+  const Icon = icons[toast.type] || Info
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="glass-strong rounded-2xl p-8 w-full max-w-md slide-up">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-12 h-12 rounded-xl bg-brand-500/20 flex items-center justify-center">
-            <User className="w-6 h-6 text-brand-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">Welcome to Barter Exchange!</h2>
-            <p className="text-dark-400 text-sm">Set your display name to get started</p>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <label className="block text-sm font-medium text-dark-300 mb-2">Your Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            placeholder="Enter your full name..."
-            className="w-full bg-dark-800/80 border border-dark-600/50 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
-            autoFocus
-          />
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={name.trim().length < 2}
-          className="mt-6 w-full bg-gradient-to-r from-brand-600 to-purple-600 text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Get Started
+    <div className="fixed top-4 right-4 z-[100] animate-slide-up">
+      <div className={`glass rounded-xl px-4 py-3 flex items-center gap-3 min-w-[300px] max-w-md border ${styles[toast.type]}`}>
+        <Icon size={20} />
+        <span className="text-sm font-medium flex-1">{toast.message}</span>
+        <button onClick={onClose} className="hover:bg-white/10 rounded-lg p-1 transition-colors">
+          <X size={16} />
         </button>
       </div>
     </div>
-  );
+  )
 }
 
-// --- Delete Confirmation Modal ---
-function ConfirmModal({ title, message, onConfirm, onCancel }) {
+/**
+ * Welcome/Name Modal Component
+ * Shown on first visit to collect the user's display name
+ */
+const WelcomeModal = ({ isOpen, onSubmit }) => {
+  const [name, setName] = useState('')
+  const [error, setError] = useState('')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!name.trim() || name.trim().length < 2) {
+      setError('Name must be at least 2 characters')
+      return
+    }
+    onSubmit(name.trim())
+    setName('')
+    setError('')
+  }
+
+  if (!isOpen) return null
+
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm slide-up">
-        <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-        <p className="text-dark-400 text-sm mb-6">{message}</p>
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="glass-strong rounded-2xl p-8 max-w-md w-full animate-slide-up">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 rounded-2xl gradient-bg flex items-center justify-center mx-auto mb-4 glow">
+            <Sparkles className="text-white" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Welcome to Barter Exchange</h2>
+          <p className="text-gray-400">Enter your name to get started. No email or password needed.</p>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setError('') }}
+              placeholder="Your display name"
+              className="w-full px-4 py-3 rounded-xl bg-dark-800/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-brand-from/50 focus:ring-2 focus:ring-brand-from/20 transition-all"
+              autoFocus
+            />
+            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+          </div>
+          <button
+            type="submit"
+            className="w-full py-3 rounded-xl gradient-bg text-white font-semibold hover:opacity-90 transition-opacity glow"
+          >
+            Get Started
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Delete Confirmation Modal Component
+ */
+const DeleteModal = ({ isOpen, listing, onConfirm, onCancel }) => {
+  if (!isOpen || !listing) return null
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="glass-strong rounded-2xl p-6 max-w-md w-full animate-slide-up">
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+            <Trash2 className="text-red-400" size={24} />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Delete Listing?</h3>
+          <p className="text-gray-400">
+            Are you sure you want to delete <span className="text-white font-medium">"{listing.skillOffered}"</span>?
+            This action cannot be undone.
+          </p>
+        </div>
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 bg-dark-700 hover:bg-dark-600 text-white py-2.5 rounded-xl font-medium transition-all"
+            className="flex-1 py-3 rounded-xl bg-white/5 text-white font-medium hover:bg-white/10 transition-colors border border-white/10"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 bg-red-500/80 hover:bg-red-500 text-white py-2.5 rounded-xl font-medium transition-all"
+            className="flex-1 py-3 rounded-xl bg-red-500/20 text-red-300 font-medium hover:bg-red-500/30 transition-colors border border-red-500/30"
           >
             Delete
           </button>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-// --- Loading Skeleton (shown while data loads) ---
-function LoadingSkeleton() {
+/**
+ * Contact Info Modal Component
+ */
+const ContactModal = ({ isOpen, listing, onClose }) => {
+  if (!isOpen || !listing) return null
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-      {[1, 2, 3, 4, 5, 6].map(i => (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="glass-strong rounded-2xl p-6 max-w-md w-full animate-slide-up">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-white">Contact Information</h3>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4 mb-6 p-4 rounded-xl bg-white/5">
+          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getUserGradient(listing.userId)} flex items-center justify-center`}>
+            <span className="text-white font-bold text-sm">{getInitials(listing.userName)}</span>
+          </div>
+          <div>
+            <p className="text-white font-semibold">{listing.userName}</p>
+            <p className="text-gray-400 text-sm">Listing Owner</p>
+          </div>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 mt-2 shrink-0" />
+            <div>
+              <p className="text-gray-400 text-sm">Offers</p>
+              <p className="text-white font-medium">{listing.skillOffered}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-blue-400 mt-2 shrink-0" />
+            <div>
+              <p className="text-gray-400 text-sm">Wants</p>
+              <p className="text-white font-medium">{listing.skillWanted}</p>
+            </div>
+          </div>
+        </div>
+
+        {listing.contactInfo ? (
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <p className="text-gray-400 text-sm mb-2">Contact Details</p>
+            <p className="text-white font-medium break-all">{listing.contactInfo}</p>
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+            <p className="text-gray-400">No contact information provided.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Loading Skeleton Component
+ * Animated placeholder cards shown while data loads
+ */
+const LoadingSkeleton = ({ count = 6 }) => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="glass rounded-2xl p-5 animate-pulse">
           <div className="flex items-center justify-between mb-4">
-            <div className="h-5 w-24 bg-dark-700 rounded-full" />
-            <div className="h-5 w-16 bg-dark-700 rounded-full" />
+            <div className="h-6 w-20 bg-white/10 rounded-full" />
+            <div className="h-4 w-12 bg-white/10 rounded" />
           </div>
-          <div className="h-6 w-3/4 bg-dark-700 rounded-lg mb-3" />
-          <div className="h-5 w-2/3 bg-dark-700 rounded-lg mb-4" />
-          <div className="h-12 w-full bg-dark-700 rounded-lg mb-4" />
-          <div className="flex items-center justify-between">
-            <div className="h-4 w-20 bg-dark-700 rounded-full" />
-            <div className="h-4 w-16 bg-dark-700 rounded-full" />
+          <div className="h-5 w-3/4 bg-white/10 rounded mb-2" />
+          <div className="h-5 w-1/2 bg-white/10 rounded mb-4" />
+          <div className="h-16 bg-white/5 rounded-lg mb-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white/10" />
+            <div className="h-4 w-24 bg-white/10 rounded" />
           </div>
         </div>
       ))}
     </div>
-  );
+  )
 }
 
-// --- Empty State (shown when no data) ---
-function EmptyState({ icon: Icon, title, description, action }) {
+/**
+ * Empty State Component
+ * Reusable centered message for empty results
+ */
+const EmptyState = ({ icon: Icon, title, description, actionLabel, onAction }) => {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="w-20 h-20 rounded-2xl bg-dark-800/80 flex items-center justify-center mb-6">
-        <Icon className="w-10 h-10 text-dark-500" />
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+        <Icon size={32} className="text-gray-500" />
       </div>
-      <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-      <p className="text-dark-400 max-w-sm mb-6">{description}</p>
-      {action}
+      <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+      <p className="text-gray-400 max-w-sm mb-6">{description}</p>
+      {actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          className="px-6 py-2.5 rounded-xl gradient-bg text-white font-medium hover:opacity-90 transition-opacity"
+        >
+          {actionLabel}
+        </button>
+      )}
     </div>
-  );
+  )
 }
 
-// --- Skill Card (displays one listing) ---
-function SkillCard({ listing, onEdit, onDelete, isOwner, onContact }) {
-  const catInfo = getCategoryInfo(listing.category);
-  const catStyle = CATEGORY_STYLES[listing.category] || CATEGORY_STYLES.other;
-  const CatIcon = catInfo.icon;
+/**
+ * Skill Card Component
+ * Reusable listing card used across multiple pages
+ */
+const SkillCard = ({ listing, currentUserId, onEdit, onDelete, onContact, showActions = true }) => {
+  const category = getCategory(listing.category)
+  const CategoryIcon = category.icon
+  const isOwner = currentUserId && listing.userId === currentUserId
 
   return (
-    <div className="glass rounded-2xl p-5 hover:bg-white/[0.08] transition-all duration-300 group">
-      {/* Category badge + time */}
+    <div className="glass rounded-2xl p-5 hover:bg-white/[0.07] transition-all duration-300 group">
+      {/* Header: Category badge + time */}
       <div className="flex items-center justify-between mb-4">
-        <span className={
-          'inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ' +
-          catStyle
-        }>
-          <CatIcon className="w-3 h-3" />
-          {catInfo.label}
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${category.color} text-white`}>
+          <CategoryIcon size={12} />
+          {category.label}
         </span>
-        <span className="flex items-center gap-1 text-xs text-dark-500">
-          <Clock className="w-3 h-3" />
-          {timeAgo(listing.createdAt)}
+        <span className="text-gray-500 text-xs flex items-center gap-1">
+          <Clock size={12} />
+          {formatTimeAgo(listing.createdAt)}
         </span>
       </div>
 
-      {/* Skill offered (green) + Skill wanted (blue) */}
-      <div className="mb-3">
-        <div className="flex items-start gap-2 mb-2">
-          <span className="mt-1.5 w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-          <div>
-            <p className="text-xs text-dark-500 uppercase tracking-wider font-medium">I Offer</p>
-            <p className="text-white font-semibold text-lg leading-tight">{listing.skillOffered}</p>
-          </div>
+      {/* Skills */}
+      <div className="space-y-2 mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+          <span className="text-gray-400 text-sm">I Offer</span>
+          <span className="text-white font-semibold text-sm">{listing.skillOffered}</span>
         </div>
-        <div className="flex items-start gap-2">
-          <span className="mt-1.5 w-2 h-2 rounded-full bg-sky-400 shrink-0" />
-          <div>
-            <p className="text-xs text-dark-500 uppercase tracking-wider font-medium">I Want</p>
-            <p className="text-white font-semibold text-lg leading-tight">{listing.skillWanted}</p>
-          </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+          <span className="text-gray-400 text-sm">I Want</span>
+          <span className="text-white font-semibold text-sm">{listing.skillWanted}</span>
         </div>
       </div>
 
       {/* Description */}
       {listing.description && (
-        <p className="text-dark-400 text-sm mb-4 line-clamp-2">{listing.description}</p>
+        <p className="text-gray-400 text-sm line-clamp-2 mb-4">{listing.description}</p>
       )}
 
-      {/* Contact info */}
+      {/* Contact info preview */}
       {listing.contactInfo && (
-        <div className="flex items-center gap-2 text-sm text-dark-400 mb-4 bg-dark-800/50 rounded-lg px-3 py-2">
-          <Send className="w-3.5 h-3.5 text-brand-400" />
-          <span className="truncate">{listing.contactInfo}</span>
+        <div className="p-2.5 rounded-lg bg-white/5 border border-white/5 mb-4">
+          <p className="text-gray-500 text-xs flex items-center gap-1.5">
+            <Mail size={12} />
+            {truncate(listing.contactInfo, 40)}
+          </p>
         </div>
       )}
 
-      {/* Bottom: user name + actions */}
-      <div className="flex items-center justify-between pt-3 border-t border-dark-700/50">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
-            {getInitials(listing.userName)}
+      {/* Footer: User + Actions */}
+      <div className="flex items-center justify-between pt-3 border-t border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getUserGradient(listing.userId)} flex items-center justify-center`}>
+            <span className="text-white font-bold text-xs">{getInitials(listing.userName)}</span>
           </div>
-          <span className="text-sm text-dark-300 font-medium">{listing.userName}</span>
+          <span className="text-gray-300 text-sm font-medium">{listing.userName}</span>
         </div>
 
-        {isOwner ? (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onEdit(listing)}
-              className="p-2 rounded-lg hover:bg-dark-700/80 text-dark-400 hover:text-brand-400 transition-all"
-              title="Edit"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onDelete(listing)}
-              className="p-2 rounded-lg hover:bg-red-500/20 text-dark-400 hover:text-red-400 transition-all"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+        {showActions && (
+          <div className="flex items-center gap-2">
+            {isOwner ? (
+              <>
+                <button
+                  onClick={() => onEdit(listing)}
+                  className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                  title="Edit"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  onClick={() => onDelete(listing)}
+                  className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => onContact(listing)}
+                className="px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-all text-sm font-medium flex items-center gap-1.5"
+              >
+                <MessageCircle size={14} />
+                Contact
+              </button>
+            )}
           </div>
-        ) : (
-          <button
-            onClick={() => onContact(listing)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/20 hover:bg-brand-500/30 text-brand-400 text-sm font-medium transition-all"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            Contact
-          </button>
         )}
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
 // SECTION 6: PAGE COMPONENTS
 // ============================================
-// Each tab/page is a separate component below.
-// To add a NEW page, create a new component here
-// and add it to the tabs array in the App component.
 
-// --- HOME PAGE ---
-function HomePage({ listings, setActiveTab, userName }) {
-  const recentListings = listings.slice(0, 3);
-  const uniqueUsers = new Set(listings.map(l => l.userId)).size;
+/**
+ * Home Page Component
+ * Landing page with hero, stats, how it works, and recent listings
+ */
+const HomePage = ({ listings, userName, onNavigate, stats }) => {
+  const recentListings = listings.slice(0, 3)
 
   return (
-    <div className="page-enter">
+    <div className="space-y-12 pb-8">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl p-8 md:p-12 mb-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-600/20 via-purple-600/10 to-dark-900" />
-        <div className="absolute top-0 right-0 w-72 h-72 bg-brand-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-500/10 rounded-full blur-3xl" />
+      <section className="relative overflow-hidden rounded-3xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/40 via-dark-800 to-purple-900/40" />
+        <div className="absolute top-10 left-10 w-72 h-72 bg-indigo-500/20 rounded-full blur-[100px]" />
+        <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-500/20 rounded-full blur-[100px]" />
 
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-sm mb-4">
-            <Sparkles className="w-4 h-4" />
-            <span>Skill Trading Platform</span>
-          </div>
-
-          <h1 className="text-3xl md:text-5xl font-black mb-4">
+        <div className="relative px-6 py-16 md:py-24 text-center">
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
             <span className="gradient-text">Barter Exchange</span>
           </h1>
-          <p className="text-dark-300 text-lg md:text-xl mb-2 max-w-2xl">
+          <p className="text-xl md:text-2xl text-gray-300 mb-2 font-light">
             Exchange Skills, Not Money.
           </p>
-          <p className="text-dark-500 text-sm md:text-base mb-8 max-w-xl">
-            {userName ? 'Welcome back, ' + userName + '! ' : ''}
-            Post what you know, find what you need. Trade your expertise with our community.
-          </p>
-
-          <div className="flex flex-wrap gap-3">
+          {userName && (
+            <p className="text-gray-400 mb-8">Welcome back, {userName}!</p>
+          )}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => setActiveTab('explore')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-600 to-purple-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all glow-sm"
+              onClick={() => onNavigate('explore')}
+              className="px-8 py-3.5 rounded-xl gradient-bg text-white font-semibold hover:opacity-90 transition-opacity glow flex items-center justify-center gap-2"
             >
+              <Search size={18} />
               Explore Skills
-              <ArrowRight className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setActiveTab('post')}
-              className="inline-flex items-center gap-2 px-6 py-3 glass hover:bg-white/10 text-white font-semibold rounded-xl transition-all"
+              onClick={() => onNavigate('post')}
+              className="px-8 py-3.5 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/15 transition-all border border-white/10 flex items-center justify-center gap-2"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle size={18} />
               Post Your Skill
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-3 md:gap-4 mb-8">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Skills Listed', value: listings.length, icon: Layers, color: 'text-brand-400' },
-          { label: 'Community', value: uniqueUsers, icon: Users, color: 'text-emerald-400' },
-          { label: 'Categories', value: CATEGORIES.length - 1, icon: TrendingUp, color: 'text-amber-400' },
-        ].map((stat, i) => (
-          <div key={i} className="glass rounded-xl p-4 text-center">
-            <stat.icon className={'w-5 h-5 ' + stat.color + ' mx-auto mb-1'} />
-            <p className="text-2xl font-bold text-white">{stat.value}</p>
-            <p className="text-xs text-dark-500">{stat.label}</p>
+          { label: 'Skills Listed', value: stats.totalListings, icon: Zap },
+          { label: 'Community', value: stats.uniqueUsers, icon: Users },
+          { label: 'Categories', value: stats.totalCategories, icon: FolderOpen },
+        ].map((stat) => (
+          <div key={stat.label} className="glass rounded-2xl p-6 text-center hover:bg-white/[0.07] transition-all">
+            <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-3">
+              <stat.icon size={24} className="text-brand-from" />
+            </div>
+            <p className="text-3xl font-bold text-white mb-1">{stat.value}</p>
+            <p className="text-gray-400 text-sm">{stat.label}</p>
           </div>
         ))}
-      </div>
+      </section>
 
       {/* How It Works */}
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <Zap className="w-5 h-5 text-amber-400" />
-          How It Works
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            {
-              step: '01',
-              title: 'Post Your Skill',
-              desc: 'Share what you are great at and what you would like to learn or exchange.',
-              icon: PlusCircle,
-              color: 'from-brand-500 to-brand-600'
-            },
-            {
-              step: '02',
-              title: 'Browse & Discover',
-              desc: 'Explore skills from our community. Filter by category to find your perfect match.',
-              icon: Search,
-              color: 'from-purple-500 to-purple-600'
-            },
-            {
-              step: '03',
-              title: 'Connect & Exchange',
-              desc: 'Reach out to people, negotiate terms, and exchange your skills with each other!',
-              icon: ArrowLeftRight,
-              color: 'from-emerald-500 to-emerald-600'
-            },
-          ].map((item, i) => (
-            <div key={i} className="glass rounded-2xl p-6 hover:bg-white/[0.08] transition-all group">
-              <div className={
-                'w-12 h-12 rounded-xl bg-gradient-to-br ' +
-                item.color +
-                ' flex items-center justify-center mb-4 group-hover:scale-110 transition-transform'
-              }>
-                <item.icon className="w-6 h-6 text-white" />
+      <section>
+        <h2 className="text-2xl font-bold text-white mb-6 text-center">How It Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {HOW_IT_WORKS.map((item) => (
+            <div key={item.step} className="glass rounded-2xl p-6 text-center hover:bg-white/[0.07] transition-all group">
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}>
+                <item.icon className="text-white" size={28} />
               </div>
-              <div className="text-xs font-bold text-dark-500 mb-1">STEP {item.step}</div>
-              <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
-              <p className="text-dark-400 text-sm">{item.desc}</p>
+              <div className="text-xs font-bold text-brand-from mb-2">Step {item.step}</div>
+              <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
+              <p className="text-gray-400 text-sm">{item.description}</p>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Recent Listings */}
-      {recentListings.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Globe className="w-5 h-5 text-blue-400" />
-              Recent Listings
-            </h2>
-            <button
-              onClick={() => setActiveTab('explore')}
-              className="text-sm text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1"
-            >
-              View All <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white">Recent Listings</h2>
+          <button
+            onClick={() => onNavigate('explore')}
+            className="text-brand-from hover:text-brand-to text-sm font-medium flex items-center gap-1 transition-colors"
+          >
+            View All
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        {recentListings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentListings.map(listing => (
-              <SkillCard key={listing.id} listing={listing} onContact={() => {}} />
+              <SkillCard
+                key={listing.id}
+                listing={listing}
+                onEdit={() => {}}
+                onDelete={() => {}}
+                onContact={() => {}}
+                showActions={false}
+              />
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <EmptyState
+            icon={FolderOpen}
+            title="No listings yet"
+            description="Be the first to post a skill and start the community!"
+            actionLabel="Post a Skill"
+            onAction={() => onNavigate('post')}
+          />
+        )}
+      </section>
     </div>
-  );
+  )
 }
 
-// --- EXPLORE PAGE ---
-function ExplorePage({ listings, userId, onContact }) {
-  const [search, setSearch] = useState('');
-  const [selectedCat, setSelectedCat] = useState('all');
+/**
+ * Explore Page Component
+ * Search, filter, and browse all skill listings
+ */
+const ExplorePage = ({ listings, loading, currentUserId, onEdit, onDelete, onContact }) => {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState('all')
 
-  // Filter listings based on search query and category
-  const filtered = listings.filter(l => {
-    const query = search.toLowerCase();
-    const matchesSearch = !search ||
-      l.skillOffered.toLowerCase().includes(query) ||
-      l.skillWanted.toLowerCase().includes(query) ||
-      l.userName.toLowerCase().includes(query) ||
-      (l.description && l.description.toLowerCase().includes(query));
-    const matchesCat = selectedCat === 'all' || l.category === selectedCat;
-    return matchesSearch && matchesCat;
-  });
+  const filteredListings = listings.filter(listing => {
+    const matchesSearch = !searchQuery ||
+      listing.skillOffered.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.skillWanted.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (listing.description && listing.description.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    const matchesCategory = activeCategory === 'all' || listing.category === activeCategory
+
+    return matchesSearch && matchesCategory
+  })
 
   return (
-    <div className="page-enter">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center gap-3 mb-2">
+        <Search className="text-brand-from" size={28} />
+        <h1 className="text-2xl md:text-3xl font-bold text-white">Explore Skills</h1>
+      </div>
+
       {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search skills, people, categories..."
-            className="w-full bg-dark-800/80 border border-dark-700/50 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-500 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search skills, people, categories..."
+          className="w-full pl-12 pr-12 py-3.5 rounded-xl bg-dark-800/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-brand-from/50 focus:ring-2 focus:ring-brand-from/20 transition-all"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <X size={18} className="text-gray-500" />
+          </button>
+        )}
       </div>
 
-      {/* Category Filter Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-4 mb-6" style={{ scrollbarWidth: 'none' }}>
-        {CATEGORIES.map(cat => {
-          const Icon = cat.icon;
-          const isActive = selectedCat === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCat(cat.id)}
-              className={
-                'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ' +
-                (isActive
-                  ? 'bg-brand-500/30 text-brand-300 border border-brand-500/40'
-                  : 'glass text-dark-400 hover:text-white hover:bg-white/10')
-              }
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {cat.label}
-            </button>
-          );
-        })}
+      {/* Category Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+        <button
+          onClick={() => setActiveCategory('all')}
+          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+            activeCategory === 'all'
+              ? 'gradient-bg text-white'
+              : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10'
+          }`}
+        >
+          All
+        </button>
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              activeCategory === cat.id
+                ? 'gradient-bg text-white'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
 
-      {/* Results count */}
-      <p className="text-sm text-dark-500 mb-4">
-        {filtered.length} {filtered.length === 1 ? 'listing' : 'listings'} found
+      {/* Results Count */}
+      <p className="text-gray-400 text-sm">
+        {filteredListings.length} listing{filteredListings.length !== 1 ? 's' : ''} found
       </p>
 
       {/* Listings Grid */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <LoadingSkeleton count={6} />
+      ) : filteredListings.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(listing => (
+          {filteredListings.map(listing => (
             <SkillCard
               key={listing.id}
               listing={listing}
-              isOwner={listing.userId === userId}
+              currentUserId={currentUserId}
+              onEdit={onEdit}
+              onDelete={onDelete}
               onContact={onContact}
             />
           ))}
@@ -599,298 +715,236 @@ function ExplorePage({ listings, userId, onContact }) {
         <EmptyState
           icon={Search}
           title="No listings found"
-          description={
-            search || selectedCat !== 'all'
-              ? 'Try adjusting your search or category filter'
-              : 'Be the first to post a skill exchange!'
-          }
+          description={searchQuery || activeCategory !== 'all'
+            ? "Try adjusting your search or filters."
+            : "No skills have been posted yet. Be the first!"}
         />
       )}
     </div>
-  );
+  )
 }
 
-// --- POST / EDIT PAGE ---
-function PostPage({ userName, userId, onPostSuccess, editingListing, onCancelEdit }) {
-  const [form, setForm] = useState({
+/**
+ * Post/Edit Page Component
+ * Form for creating or editing a skill listing
+ */
+const PostPage = ({ userId, userName, editingListing, onSubmit, onCancel, setToast }) => {
+  const [formData, setFormData] = useState({
     skillOffered: '',
     skillWanted: '',
     category: '',
     description: '',
     contactInfo: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({});
+  })
+  const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
 
   // Pre-fill form when editing
   useEffect(() => {
     if (editingListing) {
-      setForm({
+      setFormData({
         skillOffered: editingListing.skillOffered || '',
         skillWanted: editingListing.skillWanted || '',
         category: editingListing.category || '',
         description: editingListing.description || '',
         contactInfo: editingListing.contactInfo || '',
-      });
+      })
     }
-  }, [editingListing]);
+  }, [editingListing])
 
-  const handleChange = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  // Validate form before submitting
   const validate = () => {
-    const newErrors = {};
-    if (!form.skillOffered.trim() || form.skillOffered.trim().length < 3) {
-      newErrors.skillOffered = 'Please enter at least 3 characters';
+    const newErrors = {}
+    if (!formData.skillOffered.trim() || formData.skillOffered.trim().length < 3) {
+      newErrors.skillOffered = 'Skill offered must be at least 3 characters'
     }
-    if (!form.skillWanted.trim() || form.skillWanted.trim().length < 3) {
-      newErrors.skillWanted = 'Please enter at least 3 characters';
+    if (!formData.skillWanted.trim() || formData.skillWanted.trim().length < 3) {
+      newErrors.skillWanted = 'Skill wanted must be at least 3 characters'
     }
-    if (!form.category) {
-      newErrors.category = 'Please select a category';
+    if (!formData.category) {
+      newErrors.category = 'Please select a category'
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
-  // Handle form submit (create or update)
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
+    e.preventDefault()
+    if (!validate()) return
 
+    setSubmitting(true)
     try {
-      const listingData = {
-        userName,
+      await onSubmit({
+        ...formData,
         userId,
-        skillOffered: form.skillOffered.trim(),
-        skillWanted: form.skillWanted.trim(),
-        category: form.category,
-        description: form.description.trim(),
-        contactInfo: form.contactInfo.trim(),
-        updatedAt: serverTimestamp(),
-      };
+        userName,
+      })
 
-      if (editingListing) {
-        // UPDATE existing listing
-        const ref = doc(db, 'listings', editingListing.id);
-        await updateDoc(ref, listingData);
-        onPostSuccess('Listing updated successfully!');
-        onCancelEdit();
-      } else {
-        // CREATE new listing
-        listingData.createdAt = serverTimestamp();
-        await addDoc(collection(db, 'listings'), listingData);
-        onPostSuccess('Skill posted successfully!');
+      if (!editingListing) {
+        setFormData({ skillOffered: '', skillWanted: '', category: '', description: '', contactInfo: '' })
       }
-
-      // Reset form
-      setForm({
-        skillOffered: '',
-        skillWanted: '',
-        category: '',
-        description: '',
-        contactInfo: '',
-      });
-    } catch (err) {
-      console.error('Error saving listing:', err);
-      onPostSuccess('Error saving listing. Please try again.', 'error');
+    } catch (error) {
+      setToast({ type: 'error', message: error.message || 'Something went wrong' })
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
-  // Input field styling helper
-  const inputClass = (field) => {
-    return (
-      'w-full bg-dark-800/80 border rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all ' +
-      (errors[field]
-        ? 'border-red-500/50 focus:border-red-500/50'
-        : 'border-dark-600/50 focus:border-brand-500/50')
-    );
-  };
+  const isEditing = !!editingListing
 
   return (
-    <div className="page-enter max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto">
       {/* Page Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center">
-          {editingListing
-            ? <Edit3 className="w-6 h-6 text-white" />
-            : <PlusCircle className="w-6 h-6 text-white" />
-          }
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-white">
-            {editingListing ? 'Edit Listing' : 'Post Your Skill'}
-          </h2>
-          <p className="text-dark-400 text-sm">
-            {editingListing
-              ? 'Update your skill exchange listing'
-              : 'Share your skills and find what you need'
-            }
-          </p>
-        </div>
+        {isEditing ? <Edit2 className="text-brand-from" size={28} /> : <PlusCircle className="text-brand-from" size={28} />}
+        <h1 className="text-2xl md:text-3xl font-bold text-white">
+          {isEditing ? 'Edit Listing' : 'Post Your Skill'}
+        </h1>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 md:p-8 space-y-6">
         {/* Skill Offered */}
         <div>
-          <label className="block text-sm font-medium text-dark-300 mb-2">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              Skill You Offer
-            </span>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400" />
+            Skill You Offer *
           </label>
           <input
             type="text"
-            value={form.skillOffered}
-            onChange={(e) => handleChange('skillOffered', e.target.value)}
+            value={formData.skillOffered}
+            onChange={(e) => setFormData({ ...formData, skillOffered: e.target.value })}
             placeholder="e.g., Logo Design, Web Development, Guitar Lessons..."
-            className={inputClass('skillOffered')}
+            className={`w-full px-4 py-3 rounded-xl bg-dark-800/50 border text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
+              errors.skillOffered ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/10 focus:border-brand-from/50 focus:ring-brand-from/20'
+            }`}
           />
-          {errors.skillOffered && (
-            <p className="text-red-400 text-xs mt-1">{errors.skillOffered}</p>
-          )}
+          {errors.skillOffered && <p className="text-red-400 text-sm mt-2">{errors.skillOffered}</p>}
         </div>
 
         {/* Skill Wanted */}
         <div>
-          <label className="block text-sm font-medium text-dark-300 mb-2">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sky-400" />
-              Skill You Want
-            </span>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+            <div className="w-2 h-2 rounded-full bg-blue-400" />
+            Skill You Want *
           </label>
           <input
             type="text"
-            value={form.skillWanted}
-            onChange={(e) => handleChange('skillWanted', e.target.value)}
+            value={formData.skillWanted}
+            onChange={(e) => setFormData({ ...formData, skillWanted: e.target.value })}
             placeholder="e.g., Mobile App Help, English Speaking, Photography..."
-            className={inputClass('skillWanted')}
+            className={`w-full px-4 py-3 rounded-xl bg-dark-800/50 border text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
+              errors.skillWanted ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/10 focus:border-brand-from/50 focus:ring-brand-from/20'
+            }`}
           />
-          {errors.skillWanted && (
-            <p className="text-red-400 text-xs mt-1">{errors.skillWanted}</p>
-          )}
+          {errors.skillWanted && <p className="text-red-400 text-sm mt-2">{errors.skillWanted}</p>}
         </div>
 
         {/* Category */}
         <div>
-          <label className="block text-sm font-medium text-dark-300 mb-2">Category</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Category *</label>
           <select
-            value={form.category}
-            onChange={(e) => handleChange('category', e.target.value)}
-            className={
-              inputClass('category') +
-              ' appearance-none cursor-pointer' +
-              (!form.category ? ' text-dark-500' : '')
-            }
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            className={`w-full px-4 py-3 rounded-xl bg-dark-800/50 border text-white focus:outline-none focus:ring-2 transition-all appearance-none ${
+              errors.category ? 'border-red-500/50 focus:ring-red-500/20' : 'border-white/10 focus:border-brand-from/50 focus:ring-brand-from/20'
+            }`}
+            style={{ backgroundImage: 'none' }}
           >
-            <option value="" disabled>Select a category...</option>
-            {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.label}</option>
+            <option value="" className="bg-dark-800">Select a category...</option>
+            {CATEGORIES.map(cat => (
+              <option key={cat.id} value={cat.id} className="bg-dark-800">{cat.label}</option>
             ))}
           </select>
-          {errors.category && (
-            <p className="text-red-400 text-xs mt-1">{errors.category}</p>
-          )}
+          {errors.category && <p className="text-red-400 text-sm mt-2">{errors.category}</p>}
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-dark-300 mb-2">Description (optional)</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Description (optional)</label>
           <textarea
-            value={form.description}
-            onChange={(e) => handleChange('description', e.target.value)}
-            placeholder="Tell people more about your skill, experience level, availability..."
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Describe your skill, experience level, availability, or any other details..."
             rows={4}
-            className="w-full bg-dark-800/80 border border-dark-600/50 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-dark-800/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-brand-from/50 focus:ring-2 focus:ring-brand-from/20 transition-all resize-none"
           />
         </div>
 
         {/* Contact Info */}
         <div>
-          <label className="block text-sm font-medium text-dark-300 mb-2">Contact Info (optional)</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Contact Info (optional)</label>
           <input
             type="text"
-            value={form.contactInfo}
-            onChange={(e) => handleChange('contactInfo', e.target.value)}
+            value={formData.contactInfo}
+            onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })}
             placeholder="e.g., WhatsApp: 0312-xxxxxxx, email, Discord..."
-            className="w-full bg-dark-800/80 border border-dark-600/50 rounded-xl px-4 py-3 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-dark-800/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-brand-from/50 focus:ring-2 focus:ring-brand-from/20 transition-all"
           />
-          <p className="text-dark-600 text-xs mt-1">This will be visible to everyone</p>
+          <p className="text-gray-500 text-xs mt-2">This will be visible to everyone who views your listing.</p>
         </div>
 
         {/* Submit Buttons */}
         <div className="flex gap-3 pt-2">
-          {editingListing && (
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex-1 py-3.5 rounded-xl gradient-bg text-white font-semibold hover:opacity-90 transition-opacity glow disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {submitting && <Loader2 size={18} className="animate-spin" />}
+            {isEditing ? 'Update Listing' : 'Post Skill'}
+          </button>
+          {isEditing && (
             <button
               type="button"
-              onClick={onCancelEdit}
-              className="px-6 py-3 glass hover:bg-white/10 text-dark-300 font-medium rounded-xl transition-all"
+              onClick={onCancel}
+              className="px-6 py-3.5 rounded-xl bg-white/5 text-white font-medium hover:bg-white/10 transition-colors border border-white/10"
             >
               Cancel
             </button>
           )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex-1 bg-gradient-to-r from-brand-600 to-purple-600 text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {submitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : editingListing ? (
-              'Update Listing'
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Post Skill
-              </>
-            )}
-          </button>
         </div>
       </form>
     </div>
-  );
+  )
 }
 
-// --- MY LISTINGS PAGE ---
-function MyListingsPage({ listings, userId, onEdit, onDelete, setActiveTab }) {
-  const myListings = listings.filter(l => l.userId === userId);
+/**
+ * My Listings Page Component
+ * Shows only the current user's listings
+ */
+const MyListingsPage = ({ listings, currentUserId, onEdit, onDelete, onContact, onNavigate }) => {
+  const myListings = listings.filter(l => l.userId === currentUserId)
 
   return (
-    <div className="page-enter">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-white">My Listings</h2>
-          <p className="text-dark-400 text-sm">
-            {myListings.length} {myListings.length === 1 ? 'listing' : 'listings'}
-          </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Layers className="text-brand-from" size={28} />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">My Listings</h1>
+            <p className="text-gray-400 text-sm">{myListings.length} listing{myListings.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
         <button
-          onClick={() => setActiveTab('post')}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-purple-600 text-white font-medium rounded-xl hover:opacity-90 transition-all text-sm"
+          onClick={() => onNavigate('post')}
+          className="px-4 py-2.5 rounded-xl gradient-bg text-white font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
         >
-          <PlusCircle className="w-4 h-4" />
-          New
+          <PlusCircle size={18} />
+          <span className="hidden sm:inline">New</span>
         </button>
       </div>
 
+      {/* Listings Grid */}
       {myListings.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {myListings.map(listing => (
             <SkillCard
               key={listing.id}
               listing={listing}
-              isOwner={true}
+              currentUserId={currentUserId}
               onEdit={onEdit}
               onDelete={onDelete}
+              onContact={onContact}
             />
           ))}
         </div>
@@ -898,71 +952,83 @@ function MyListingsPage({ listings, userId, onEdit, onDelete, setActiveTab }) {
         <EmptyState
           icon={Layers}
           title="No listings yet"
-          description="You haven't posted any skills yet. Start by posting your first skill exchange!"
-          action={
-            <button
-              onClick={() => setActiveTab('post')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-600 to-purple-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Post Your First Skill
-            </button>
-          }
+          description="You haven't posted any skills yet. Start by creating your first listing!"
+          actionLabel="Post Your First Skill"
+          onAction={() => onNavigate('post')}
         />
       )}
     </div>
-  );
+  )
 }
 
-// --- PROFILE PAGE ---
-function ProfilePage({ userName, userId, listings, onUpdateName, onLogout }) {
-  const [editing, setEditing] = useState(false);
-  const [newName, setNewName] = useState(userName);
-  const myListings = listings.filter(l => l.userId === userId);
+/**
+ * Profile Page Component
+ * User profile with stats and account settings
+ */
+const ProfilePage = ({ userName, userId, listings, onUpdateName, onResetAccount }) => {
+  const [editingName, setEditingName] = useState(false)
+  const [newName, setNewName] = useState(userName)
+  const [nameError, setNameError] = useState('')
 
-  const handleSave = () => {
-    if (newName.trim().length >= 2) {
-      onUpdateName(newName.trim());
-      setEditing(false);
+  const myListingsCount = listings.filter(l => l.userId === userId).length
+
+  const handleSaveName = () => {
+    if (!newName.trim() || newName.trim().length < 2) {
+      setNameError('Name must be at least 2 characters')
+      return
     }
-  };
+    onUpdateName(newName.trim())
+    setEditingName(false)
+    setNameError('')
+  }
+
+  const handleCancelEdit = () => {
+    setNewName(userName)
+    setEditingName(false)
+    setNameError('')
+  }
 
   return (
-    <div className="page-enter max-w-lg mx-auto">
-      {/* Profile Header */}
-      <div className="glass rounded-2xl p-8 text-center mb-6">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-500 via-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold text-white mx-auto mb-4 glow">
-          {getInitials(userName)}
+    <div className="max-w-lg mx-auto space-y-6">
+      {/* Profile Card */}
+      <div className="glass rounded-2xl p-8 text-center">
+        <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${getUserGradient(userId)} flex items-center justify-center mx-auto mb-4 glow`}>
+          <span className="text-white font-bold text-2xl">{getInitials(userName)}</span>
         </div>
 
-        {editing ? (
-          <div className="flex items-center gap-2 justify-center mt-2">
+        {editingName ? (
+          <div className="space-y-3 mb-4">
             <input
               type="text"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              className="bg-dark-800/80 border border-dark-600/50 rounded-xl px-4 py-2 text-white text-center focus:outline-none focus:border-brand-500/50"
+              onChange={(e) => { setNewName(e.target.value); setNameError('') }}
+              className="w-full px-4 py-2.5 rounded-xl bg-dark-800/50 border border-white/10 text-white text-center focus:outline-none focus:border-brand-from/50 focus:ring-2 focus:ring-brand-from/20"
               autoFocus
             />
-            <button onClick={handleSave} className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30">
-              <Check className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => { setEditing(false); setNewName(userName); }}
-              className="p-2 rounded-lg bg-dark-700 text-dark-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {nameError && <p className="text-red-400 text-sm">{nameError}</p>}
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={handleSaveName}
+                className="p-2 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+              >
+                <Check size={18} />
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="p-2 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
         ) : (
-          <div>
-            <h2 className="text-2xl font-bold text-white">{userName || 'Anonymous'}</h2>
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-white mb-1">{userName}</h2>
             <button
-              onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-1 text-sm text-dark-400 hover:text-brand-400 mt-1 transition-all"
+              onClick={() => setEditingName(true)}
+              className="text-brand-from hover:text-brand-to text-sm font-medium flex items-center gap-1 mx-auto transition-colors"
             >
-              <Edit3 className="w-3.5 h-3.5" />
+              <Edit2 size={14} />
               Edit name
             </button>
           </div>
@@ -970,422 +1036,398 @@ function ProfilePage({ userName, userId, listings, onUpdateName, onLogout }) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="glass rounded-xl p-4 text-center">
-          <Layers className="w-5 h-5 text-brand-400 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-white">{myListings.length}</p>
-          <p className="text-xs text-dark-500">My Listings</p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="glass rounded-2xl p-6 text-center">
+          <p className="text-3xl font-bold text-white mb-1">{myListingsCount}</p>
+          <p className="text-gray-400 text-sm">My Listings</p>
         </div>
-        <div className="glass rounded-xl p-4 text-center">
-          <Award className="w-5 h-5 text-amber-400 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-white">0</p>
-          <p className="text-xs text-dark-500">Exchanges</p>
+        <div className="glass rounded-2xl p-6 text-center">
+          <p className="text-3xl font-bold text-white mb-1">0</p>
+          <p className="text-gray-400 text-sm">Exchanges</p>
         </div>
       </div>
 
       {/* Account Info */}
-      <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-bold text-white mb-4">Account Info</h3>
+      <div className="glass rounded-2xl p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-white mb-4">Account Info</h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-dark-400">User ID</span>
-            <span className="text-xs text-dark-500 font-mono bg-dark-800 px-2 py-1 rounded">
-              {userId ? userId.slice(0, 16) + '...' : 'Loading...'}
-            </span>
+          <div className="flex justify-between items-center py-2 border-b border-white/5">
+            <span className="text-gray-400 text-sm">User ID</span>
+            <span className="text-gray-300 text-sm font-mono">{truncate(userId, 16)}</span>
           </div>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-dark-400">Platform</span>
-            <span className="text-sm text-dark-300">Barter Exchange v1.0</span>
+          <div className="flex justify-between items-center py-2 border-b border-white/5">
+            <span className="text-gray-400 text-sm">Platform</span>
+            <span className="text-gray-300 text-sm">Barter Exchange v1.0</span>
           </div>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-dark-400">Database</span>
-            <span className="text-sm text-dark-300">Firebase Firestore</span>
+          <div className="flex justify-between items-center py-2">
+            <span className="text-gray-400 text-sm">Database</span>
+            <span className="text-gray-300 text-sm">Firebase Firestore</span>
           </div>
         </div>
-
-        <button
-          onClick={onLogout}
-          className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 bg-dark-800/80 border border-dark-700/50 text-dark-400 hover:text-red-400 hover:border-red-500/30 rounded-xl transition-all text-sm font-medium"
-        >
-          <LogOut className="w-4 h-4" />
-          Reset Account
-        </button>
       </div>
+
+      {/* Reset Account */}
+      <button
+        onClick={onResetAccount}
+        className="w-full py-3.5 rounded-xl bg-red-500/10 text-red-400 font-medium hover:bg-red-500/20 transition-colors border border-red-500/20 flex items-center justify-center gap-2"
+      >
+        <RefreshCw size={18} />
+        Reset Account
+      </button>
     </div>
-  );
+  )
 }
 
 // ============================================
 // SECTION 7: MAIN APP COMPONENT
 // ============================================
-// This is the root component that ties everything together.
-// It manages: auth, data, navigation, modals, and state.
 
-export default function App() {
-  // ---- STATE VARIABLES ----
-  const [activeTab, setActiveTab] = useState('home');    // Current active tab/page
-  const [listings, setListings] = useState([]);           // All listings from Firestore
-  const [loading, setLoading] = useState(true);           // Loading state
-  const [userName, setUserName] = useState(               // User display name
-    () => localStorage.getItem('barterUserName') || ''
-  );
-  const [userId, setUserId] = useState('');               // Firebase anonymous user ID
-  const [showNameModal, setShowNameModal] = useState(false); // Show welcome modal
-  const [toast, setToast] = useState({                    // Toast notification state
-    show: false, message: '', type: 'success'
-  });
-  const [editingListing, setEditingListing] = useState(null); // Listing being edited
-  const [deleteTarget, setDeleteTarget] = useState(null);     // Listing to delete
-  const [contactInfo, setContactInfo] = useState(null);       // Contact info to show
+/**
+ * Main App Component
+ * Handles authentication, routing, state management, and layout
+ */
+const App = () => {
+  // State
+  const [activeTab, setActiveTab] = useState('home')
+  const [sidebarExpanded, setSidebarExpanded] = useState(false)
+  const [user, setUser] = useState(null)
+  const [userName, setUserName] = useState('')
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [listings, setListings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState(null)
+  const [editingListing, setEditingListing] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [contactTarget, setContactTarget] = useState(null)
+  const [stats, setStats] = useState({ totalListings: 0, uniqueUsers: 0, totalCategories: CATEGORIES.length })
 
-  // ---- FIREBASE AUTH ----
-  // Sign in anonymously on app load
+  // Refs
+  const unsubscribeRef = useRef(null)
+
+  // ============================================
+  // AUTHENTICATION
+  // ============================================
+
   useEffect(() => {
-    signInAnonymously(auth).catch(console.error);
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Show name modal if user has no name yet
-  useEffect(() => {
-    if (userId && !userName) {
-      setShowNameModal(true);
+    // Check for existing user name
+    const storedName = localStorage.getItem('barterUserName')
+    if (storedName) {
+      setUserName(storedName)
     }
-  }, [userId, userName]);
 
-  // ---- FIRESTORE REAL-TIME LISTENER ----
-  // Automatically updates when listings change
-  useEffect(() => {
-    const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setListings(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Firestore error:', err);
-        setListings([]);
-        setLoading(false);
+    // Listen for auth state changes
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser)
+        if (!storedName) {
+          setShowWelcomeModal(true)
+        }
+      } else {
+        // Sign in anonymously
+        try {
+          await signInAnonymously(auth)
+        } catch (error) {
+          console.error('Anonymous auth failed:', error)
+          setToast({ type: 'error', message: 'Authentication failed. Please refresh.' })
+        }
       }
-    );
+    })
 
-    return () => unsubscribe();
-  }, []);
+    return () => unsubscribeAuth()
+  }, [])
 
-  // ---- HELPER FUNCTIONS ----
+  // ============================================
+  // FIRESTORE REAL-TIME LISTENERS
+  // ============================================
 
-  // Show a toast notification
-  const showToast = (message, type) => {
-    type = type || 'success';
-    setToast({ show: true, message: message, type: type });
-    setTimeout(function () {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 3000);
-  };
+  useEffect(() => {
+    if (!user) return
 
-  // Save user name
-  const handleSaveName = (name) => {
-    setUserName(name);
-    localStorage.setItem('barterUserName', name);
-    setShowNameModal(false);
-    showToast('Welcome, ' + name + '!');
-  };
+    setLoading(true)
+    const q = query(listingsCollection, orderBy('createdAt', 'desc'))
 
-  // After posting/updating a listing
-  const handlePostSuccess = (message, type) => {
-    type = type || 'success';
-    showToast(message, type);
-    if (type === 'success' && !editingListing) {
-      setActiveTab('my');
+    unsubscribeRef.current = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      setListings(data)
+
+      // Calculate stats
+      const uniqueUserIds = new Set(data.map(l => l.userId))
+      setStats({
+        totalListings: data.length,
+        uniqueUsers: uniqueUserIds.size,
+        totalCategories: CATEGORIES.length
+      })
+
+      setLoading(false)
+    }, (error) => {
+      console.error('Firestore error:', error)
+      setLoading(false)
+      setToast({ type: 'error', message: 'Failed to load listings. Check your connection.' })
+    })
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+      }
     }
-  };
+  }, [user])
 
-  // Start editing a listing
-  const handleEdit = (listing) => {
-    setEditingListing(listing);
-    setActiveTab('post');
-  };
+  // ============================================
+  // HANDLERS
+  // ============================================
 
-  // Cancel editing
-  const handleCancelEdit = () => {
-    setEditingListing(null);
-  };
+  const handleNameSubmit = (name) => {
+    localStorage.setItem('barterUserName', name)
+    setUserName(name)
+    setShowWelcomeModal(false)
+    setToast({ type: 'success', message: `Welcome, ${name}!` })
+  }
 
-  // Confirm and delete a listing
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
+  const handleCreateListing = async (data) => {
+    await addDoc(listingsCollection, {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    setToast({ type: 'success', message: 'Skill posted successfully!' })
+    setActiveTab('my-listings')
+  }
+
+  const handleUpdateListing = async (data) => {
+    if (!editingListing) return
+    const docRef = doc(db, 'listings', editingListing.id)
+    await updateDoc(docRef, {
+      ...data,
+      updatedAt: serverTimestamp(),
+    })
+    setEditingListing(null)
+    setToast({ type: 'success', message: 'Listing updated successfully!' })
+    setActiveTab('my-listings')
+  }
+
+  const handleDeleteListing = async () => {
+    if (!deleteTarget) return
     try {
-      await deleteDoc(doc(db, 'listings', deleteTarget.id));
-      showToast('Listing deleted');
-    } catch (err) {
-      showToast('Error deleting listing', 'error');
+      await deleteDoc(doc(db, 'listings', deleteTarget.id))
+      setToast({ type: 'success', message: 'Listing deleted successfully!' })
+    } catch (error) {
+      setToast({ type: 'error', message: 'Failed to delete listing.' })
     }
-    setDeleteTarget(null);
-  };
+    setDeleteTarget(null)
+  }
 
-  // Show contact info modal
-  const handleContact = (listing) => {
-    if (listing.contactInfo) {
-      setContactInfo(listing);
-    } else {
-      showToast('No contact info provided for this listing', 'info');
-    }
-  };
+  const handleEditClick = (listing) => {
+    setEditingListing(listing)
+    setActiveTab('post')
+  }
 
-  // Reset account (clear name, show welcome modal again)
-  const handleLogout = () => {
-    localStorage.removeItem('barterUserName');
-    setUserName('');
-    setShowNameModal(true);
-    setActiveTab('home');
-    showToast('Account reset');
-  };
+  const handleCancelEdit = () => {
+    setEditingListing(null)
+    setActiveTab('my-listings')
+  }
 
-  // ---- NAVIGATION TABS ----
-  // To add a new tab/page:
-  // 1. Create a new component in SECTION 6
-  // 2. Add it to this array
-  // 3. Add a case in renderPage() below
-  const tabs = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'explore', label: 'Explore', icon: Search },
-    { id: 'post', label: 'Post', icon: PlusCircle },
-    { id: 'my', label: 'My Listings', icon: Layers },
-    { id: 'profile', label: 'Profile', icon: User },
-  ];
+  const handleContactClick = (listing) => {
+    setContactTarget(listing)
+  }
 
-  // ---- RENDER ACTIVE PAGE ----
+  const handleUpdateName = (newName) => {
+    localStorage.setItem('barterUserName', newName)
+    setUserName(newName)
+    setToast({ type: 'success', message: 'Name updated successfully!' })
+  }
+
+  const handleResetAccount = () => {
+    localStorage.removeItem('barterUserName')
+    setUserName('')
+    setShowWelcomeModal(true)
+    setToast({ type: 'info', message: 'Account reset. Please enter your name again.' })
+  }
+
+  const handleNavigate = (tab) => {
+    setActiveTab(tab)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // ============================================
+  // RENDER HELPERS
+  // ============================================
+
   const renderPage = () => {
-    if (loading) return <LoadingSkeleton />;
-
     switch (activeTab) {
       case 'home':
-        return <HomePage listings={listings} setActiveTab={setActiveTab} userName={userName} />;
+        return <HomePage listings={listings} userName={userName} onNavigate={handleNavigate} stats={stats} />
       case 'explore':
-        return <ExplorePage listings={listings} userId={userId} onContact={handleContact} />;
+        return (
+          <ExplorePage
+            listings={listings}
+            loading={loading}
+            currentUserId={user?.uid}
+            onEdit={handleEditClick}
+            onDelete={setDeleteTarget}
+            onContact={handleContactClick}
+          />
+        )
       case 'post':
         return (
           <PostPage
+            userId={user?.uid}
             userName={userName}
-            userId={userId}
-            onPostSuccess={handlePostSuccess}
             editingListing={editingListing}
-            onCancelEdit={handleCancelEdit}
+            onSubmit={editingListing ? handleUpdateListing : handleCreateListing}
+            onCancel={handleCancelEdit}
+            setToast={setToast}
           />
-        );
-      case 'my':
+        )
+      case 'my-listings':
         return (
           <MyListingsPage
             listings={listings}
-            userId={userId}
-            onEdit={handleEdit}
+            currentUserId={user?.uid}
+            onEdit={handleEditClick}
             onDelete={setDeleteTarget}
-            setActiveTab={setActiveTab}
+            onContact={handleContactClick}
+            onNavigate={handleNavigate}
           />
-        );
+        )
       case 'profile':
         return (
           <ProfilePage
             userName={userName}
-            userId={userId}
+            userId={user?.uid || ''}
             listings={listings}
-            onUpdateName={function (name) {
-              setUserName(name);
-              localStorage.setItem('barterUserName', name);
-              showToast('Name updated!');
-            }}
-            onLogout={handleLogout}
+            onUpdateName={handleUpdateName}
+            onResetAccount={handleResetAccount}
           />
-        );
+        )
       default:
-        return <HomePage listings={listings} setActiveTab={setActiveTab} userName={userName} />;
+        return <HomePage listings={listings} userName={userName} onNavigate={handleNavigate} stats={stats} />
     }
-  };
+  }
 
   // ============================================
-  // SECTION 8: MAIN LAYOUT (JSX)
+  // MAIN RENDER
   // ============================================
+
   return (
-    <div className="min-h-screen bg-dark-950 text-white">
+    <div className="min-h-screen bg-dark-900 text-gray-300">
+      {/* Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {/* ===== TOP HEADER ===== */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 glass-strong border-b border-dark-700/30">
-        <div className="h-full flex items-center justify-between px-4 md:px-6 max-w-[1600px] mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center">
-              <ArrowLeftRight className="w-5 h-5 text-white" />
+      {/* Welcome Modal */}
+      <WelcomeModal isOpen={showWelcomeModal} onSubmit={handleNameSubmit} />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={!!deleteTarget}
+        listing={deleteTarget}
+        onConfirm={handleDeleteListing}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Contact Info Modal */}
+      <ContactModal
+        isOpen={!!contactTarget}
+        listing={contactTarget}
+        onClose={() => setContactTarget(null)}
+      />
+
+      {/* Fixed Top Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 glass-strong z-50 flex items-center justify-between px-4 md:px-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+            className="lg:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <Menu size={20} className="text-white" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center">
+              <RefreshCw size={18} className="text-white" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">
-                Barter<span className="text-brand-400">Exchange</span>
-              </h1>
-              <p className="text-[10px] text-dark-500 leading-tight hidden sm:block">
-                Skills, Not Money
-              </p>
-            </div>
+            <span className="text-lg font-bold gradient-text hidden sm:inline">Barter Exchange</span>
           </div>
+        </div>
 
+        <div className="flex items-center gap-3">
           {userName && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500/30 to-purple-600/30 border border-brand-500/30 flex items-center justify-center text-xs font-bold text-brand-300">
-                {getInitials(userName)}
+              <span className="text-gray-300 text-sm hidden md:inline">{userName}</span>
+              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${getUserGradient(user?.uid)} flex items-center justify-center`}>
+                <span className="text-white font-bold text-xs">{getInitials(userName)}</span>
               </div>
-              <span className="text-sm text-dark-300 hidden sm:block">{userName}</span>
             </div>
           )}
         </div>
       </header>
 
-      {/* ===== DESKTOP SIDEBAR ===== */}
-      <aside className="hidden md:flex fixed left-0 top-16 bottom-0 w-20 lg:w-64 flex-col glass-strong border-r border-dark-700/30 z-40">
-        <nav className="flex-1 py-4 px-2 lg:px-3">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+      {/* Left Sidebar (Desktop) */}
+      <aside
+        className={`fixed left-0 top-16 bottom-0 glass-strong z-40 transition-all duration-300 hidden lg:flex flex-col ${
+          sidebarExpanded ? 'w-64' : 'w-20'
+        }`}
+        onMouseEnter={() => setSidebarExpanded(true)}
+        onMouseLeave={() => setSidebarExpanded(false)}
+      >
+        <nav className="flex-1 py-4 px-3 space-y-1">
+          {NAV_ITEMS.map(item => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
             return (
               <button
-                key={tab.id}
-                onClick={function () {
-                  setActiveTab(tab.id);
-                  setEditingListing(null);
-                }}
-                className={
-                  'w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all group ' +
-                  (isActive
-                    ? 'bg-brand-500/20 text-brand-300'
-                    : 'text-dark-500 hover:text-white hover:bg-white/5')
-                }
+                key={item.id}
+                onClick={() => handleNavigate(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+                  isActive
+                    ? 'gradient-bg text-white shadow-lg shadow-indigo-500/20'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                }`}
               >
-                <Icon className={
-                  'w-5 h-5 shrink-0 ' +
-                  (isActive ? 'text-brand-400' : 'group-hover:text-white')
-                } />
-                <span className="hidden lg:block text-sm font-medium">{tab.label}</span>
-                {isActive && (
-                  <span className="hidden lg:block w-1.5 h-1.5 rounded-full bg-brand-400 ml-auto" />
-                )}
+                <Icon size={22} className="shrink-0" />
+                <span className={`font-medium whitespace-nowrap transition-all ${sidebarExpanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+                  {item.label}
+                </span>
               </button>
-            );
+            )
           })}
         </nav>
-
-        {/* Sidebar Footer */}
-        <div className="p-3 lg:p-4 border-t border-dark-700/30">
-          <div className="glass rounded-xl p-3 lg:p-4">
-            <p className="text-xs text-dark-500 hidden lg:block mb-2">Need help?</p>
-            <p className="text-xs text-dark-400 hidden lg:block">
-              Check the README.md for setup instructions and how to add features.
-            </p>
-            <Sparkles className="w-5 h-5 text-brand-400 mx-auto lg:mx-0" />
-          </div>
-        </div>
       </aside>
 
-      {/* ===== MAIN CONTENT AREA ===== */}
-      <main className="pt-16 min-h-screen md:ml-20 lg:ml-64 pb-20 md:pb-6">
-        <div className="p-4 md:p-6 lg:p-8 max-w-[1200px]">
+      {/* Main Content Area */}
+      <main className={`pt-16 min-h-screen transition-all ${
+        'lg:ml-20'
+      }`}>
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-6">
           {renderPage()}
         </div>
       </main>
 
-      {/* ===== MOBILE BOTTOM NAVIGATION ===== */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-strong border-t border-dark-700/30">
-        <div className="flex items-center justify-around h-16 px-2">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={function () {
-                  setActiveTab(tab.id);
-                  setEditingListing(null);
-                }}
-                className={
-                  'flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all ' +
-                  (isActive ? 'text-brand-400' : 'text-dark-500')
-                }
-              >
-                <div className={'p-1 rounded-lg transition-all ' + (isActive ? 'bg-brand-500/20' : '')}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-medium">{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Bottom Navigation (Mobile) */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 glass-strong z-50 flex items-center justify-around lg:hidden">
+        {NAV_ITEMS.map(item => {
+          const Icon = item.icon
+          const isActive = activeTab === item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavigate(item.id)}
+              className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${
+                isActive ? 'text-brand-from' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <Icon size={22} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          )
+        })}
       </nav>
 
-      {/* ===== MODALS ===== */}
-      {/* Toast Notification */}
-      <Toast
-        toast={toast}
-        onClose={function () {
-          setToast({ show: false, message: '', type: 'success' });
-        }}
-      />
-
-      {/* Welcome / Name Modal */}
-      {showNameModal && <NameModal onSave={handleSaveName} currentName={userName} />}
-
-      {/* Delete Confirmation Modal */}
-      {deleteTarget && (
-        <ConfirmModal
-          title="Delete Listing?"
-          message={
-            'Are you sure you want to delete "' +
-            deleteTarget.skillOffered +
-            '"? This action cannot be undone.'
-          }
-          onConfirm={handleDeleteConfirm}
-          onCancel={function () { setDeleteTarget(null); }}
-        />
-      )}
-
-      {/* Contact Info Modal */}
-      {contactInfo && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="glass-strong rounded-2xl p-6 w-full max-w-sm slide-up">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-brand-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Contact Info</h3>
-                <p className="text-dark-400 text-sm">{contactInfo.userName}</p>
-              </div>
-            </div>
-            <div className="bg-dark-800/50 rounded-xl p-4 mb-4">
-              <p className="text-white">{contactInfo.contactInfo}</p>
-            </div>
-            <div className="text-sm text-dark-400 mb-4">
-              <p className="mb-1">
-                <span className="text-emerald-400 font-medium">Offers:</span> {contactInfo.skillOffered}
-              </p>
-              <p>
-                <span className="text-sky-400 font-medium">Wants:</span> {contactInfo.skillWanted}
-              </p>
-            </div>
-            <button
-              onClick={function () { setContactInfo(null); }}
-              className="w-full bg-dark-700 hover:bg-dark-600 text-white py-2.5 rounded-xl font-medium transition-all"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Mobile bottom padding for nav */}
+      <div className="h-16 lg:hidden" />
     </div>
-  );
+  )
 }
+
+export default App
