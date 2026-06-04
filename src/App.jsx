@@ -15,7 +15,7 @@ import {
   Sparkles, Crown, Gem, Medal, Gift, ThumbsUp, AlertTriangle, Settings,
   UserPlus, UserX, EyeOff, Key, Trash, CheckCircle, XCircle, Play,
   Maximize2, ZoomIn
-} from "lucide-react"
+} from "lucide-react";
 import { initializeApp } from "firebase/app";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
